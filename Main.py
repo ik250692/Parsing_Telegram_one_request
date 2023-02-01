@@ -16,7 +16,7 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 client.start()
 n=0
-while n<=18:
+while n<=22:
     n = n+1
     chats_name = list_all[n+1]
     history = client(GetHistoryRequest(
@@ -37,19 +37,19 @@ while n<=18:
     to_date = datetime.date.today() - datetime.timedelta(days=1)
 
     for message in messages:
-        # if message.media == None:
             limit_day = to_date + datetime.timedelta(days=1)
             lower_day = from_date - datetime.timedelta(days=1)
             if message.date.day == lower_day.day and message.date.month == lower_day.month and message.date.year == lower_day.year: # установка даты
                 print(message.date)
                 cursor.execute(
-                    'insert into tv_7(parsedate,link,status,title,newsdate,description,video_link) values(%s,%s,%s,%s,%s,%s,%s)',
-                    (datetime.date.today(), chats_name, 'Telegram', message.id, message.date, message.message,
-                     'Empty'))  # записываем сообщения в БД
+                    'insert into tv_7(date_parse,link,status,title,date_news,description,link_img) values(%s,%s,%s,%s,%s,%s,%s)',
+                    (datetime.date.today(), chats_name, 'Telegram', chats_name, message.date, message.message,
+                     'Telegram'))  # записываем сообщения в БД
                 conn.commit()
             else:
                 pass
 
 conn.close()
+
 
 #153154: '19797842', '995af4977e3d64958a3735e96590e9bf'
