@@ -1,55 +1,63 @@
 import psycopg2
 import datetime
-from telethon import TelegramClient, events, sync  # импортируем библиотеки
-from pars_conf import account, list_all  # импортируем данные из файл конфигурации
+import schedule
+import time
+from telethon import TelegramClient, events, sync
+from pars_conf import account, list_all
 from telethon.tl.functions.messages import GetHistoryRequest
-api_id = account[0]  # задаем API
-api_hash = account[1]  #задаем HASH
-client = TelegramClient('my_account', api_id, api_hash)  # собираем клиента
+
+n = 1
+api_id = account[0]
+api_hash = account[1]
+client = TelegramClient('my_account', api_id, api_hash)
 
 conn = psycopg2.connect(
-            host = 'localhost',
-            user = 'postgres',
-            password = 'postgres',  # your password
-            port = '5432',
-            dbname = 'postgres')
-cursor = conn.cursor()
-client.start()
-n=0
-while n<=22:
-    n = n+1
-    chats_name = list_all[n+1]
-    history = client(GetHistoryRequest(
-        peer=chats_name,
-        offset_id=0,
-        offset_date=None,
-        add_offset=0,
-        limit=500,
-        max_id=0,
-        min_id=0,
-        hash=0
-    ))
+    host='localhost',
+    user='postgres',
+    password='postgres',
+    port='5432',
+    dbname='postgres'
+)
 
-    common_id = 0
-    message_counter = 0
-    messages = history.messages
-    from_date = datetime.date.today()
-    to_date = datetime.date.today() - datetime.timedelta(days=1)
+def run_code():
+    client.start()
+    for chats_name in list_all[0:]:
+        history = client(GetHistoryRequest(
+            peer=chats_name,
+            offset_id=0,
+            offset_date=None,
+            add_offset=0,
+            limit=500,
+            max_id=0,
+            min_id=0,
+            hash=0
+        ))
 
-    for message in messages:
-            limit_day = to_date + datetime.timedelta(days=1)
-            lower_day = from_date - datetime.timedelta(days=1)
-            if message.date.day == lower_day.day and message.date.month == lower_day.month and message.date.year == lower_day.year: # установка даты
+        common_id = 0
+        message_counter = 0
+        messages = history.messages
+        from_date = datetime.date.today()
+        to_date = datetime.date.today() - datetime.timedelta(days=n)
+
+        cursor = conn.cursor()
+        for message in messages:
+            limit_day = to_date + datetime.timedelta(days=n)
+            lower_day = from_date - datetime.timedelta(days=n)
+            if message.date.day == lower_day.day and message.date.month == lower_day.month and message.date.year == lower_day.year:
                 print(message.date)
                 cursor.execute(
                     'insert into tv_7(date_parse,link,status,title,date_news,description,link_img) values(%s,%s,%s,%s,%s,%s,%s)',
-                    (datetime.date.today(), chats_name, 'Telegram', chats_name, message.date, message.message,
-                     'Telegram'))  # записываем сообщения в БД
-                conn.commit()
+                    (datetime.date.today(), chats_name, 'Telegram', chats_name, message.date, message.message, 'Telegram'))
             else:
                 pass
+        conn.commit()
 
-conn.close()
+
+schedule.every().day.at('12:08').do(run_code)
+while True:
+    schedule.run_pending()
+    time.sleep(1)
+if __name__=='__main__':
+    main()
 
 
-#153154: '19797842', '995af4977e3d64958a3735e96590e9bf'
